@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>Space Invaders Modern</title>
     <style>
       :root {
@@ -36,6 +39,9 @@
         color: rgba(0, 255, 255, 0.4);
         pointer-events: none;
         letter-spacing: 1px;
+      }
+      @media (pointer: coarse), (max-width: 900px) {
+        .hint { display: none; }
       }
     </style>
   </head>

@@ -49,4 +49,15 @@ export class Input {
     this.pressedThisFrame.clear();
     this.releasedThisFrame.clear();
   }
+
+  // Synthesize a key event from an external source (e.g. on-screen touch buttons).
+  setVirtualKey(code: string, down: boolean): void {
+    if (down) {
+      if (!this.down.has(code)) this.pressedThisFrame.add(code);
+      this.down.add(code);
+    } else {
+      if (this.down.has(code)) this.releasedThisFrame.add(code);
+      this.down.delete(code);
+    }
+  }
 }

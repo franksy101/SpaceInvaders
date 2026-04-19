@@ -18,6 +18,7 @@ import {
 } from "./ui";
 import { CRTFilter } from "./crtFilter";
 import { HighscoreBoard } from "./highscores";
+import { installTouchControls } from "./touchControls";
 
 type State = "TITLE" | "PLAYING" | "PAUSED" | "GAME_OVER" | "HS_ENTRY" | "HS_BOARD";
 
@@ -82,6 +83,9 @@ export class Game {
     this.container.appendChild(this.app.canvas);
     this.applyResponsiveScale();
     window.addEventListener("resize", () => this.applyResponsiveScale());
+    window.addEventListener("orientationchange", () => this.applyResponsiveScale());
+
+    installTouchControls(this.input, document.body);
 
     this.root.addChild(this.world, this.uiLayer);
     this.app.stage.addChild(this.root);
@@ -354,8 +358,17 @@ export class Game {
     this.player.update(dt, left, right);
 
     if (this.input.anyDown(["Space", "KeyK"]) && this.player.canShoot()) {
-      const b = this.bullets.spawn(this.player.x, this.player.y - 18, true, 0xfffcf0);
-      if (b) {
+      const spread = CONFIG.player.salvoSpread;
+      const count = CONFIG.player.salvoCount;
+      let anySpawned = false;
+      // Fan out symmetrically around the center muzzle: -1, 0, +1 for count=3.
+      const half = (count - 1) / 2;
+      for (let i = 0; i < count; i++) {
+        const offset = (i - half) * spread;
+        const b = this.bullets.spawn(this.player.x + offset, this.player.y - 18, true, 0xfffcf0);
+        if (b) anySpawned = true;
+      }
+      if (anySpawned) {
         this.player.resetShoot();
         audio.shoot();
       }

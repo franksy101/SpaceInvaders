@@ -7,6 +7,8 @@ export interface GameConfig {
     height: number;
     speed: number;
     fireCooldown: number;
+    salvoCount: number;
+    salvoSpread: number;
     spawnY: number;
     color: number;
   };
@@ -60,8 +62,10 @@ export const CONFIG: GameConfig = {
   player: {
     width: 44,
     height: 22,
-    speed: 320,
-    fireCooldown: 0.35,
+    speed: 340,
+    fireCooldown: 0.18,
+    salvoCount: 3,
+    salvoSpread: 12, // horizontal offset between side bullets, in pixels
     spawnY: 660,
     color: 0x00ffd1,
   },
