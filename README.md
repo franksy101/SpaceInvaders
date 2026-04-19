@@ -41,17 +41,32 @@ Open the URL Vite prints (typically `http://localhost:5173`).
 ## Build
 
 ```bash
-npm run build      # type-check + production bundle into dist/
+npm run build      # type-check + production bundle into docs/
 npm run preview    # preview the production build locally
 ```
 
+## Layout
+
+- `dev/index.html` is the Vite dev-server entry (referenced via `root: "dev"`).
+- `src/` contains the TypeScript sources.
+- `docs/` holds the **committed** production build; GitHub Pages serves it.
+- The repository-root `index.html` is a redirect to `./docs/` so hitting the
+  repo URL without a path still lands on the game.
+
 ## Deploy to GitHub Pages
 
-This repo includes `.github/workflows/deploy.yml`, which builds on every push
-to `main` (or `claude/space-invaders-game-KiwaG`) and deploys `dist/` via
-`actions/deploy-pages@v4`.
+You have two options, pick one:
 
-Activate it once in **GitHub: Settings -> Pages -> Source: GitHub Actions**.
+### A. Serve from the `/docs` folder (zero-config)
+
+**Settings -> Pages -> Source: Deploy from a branch -> Branch: main / `/docs`.**
+Pushing a rebuilt `docs/` folder to `main` is all you need; no Action required.
+
+### B. Use the built-in GitHub Actions workflow
+
+`.github/workflows/deploy.yml` runs `npm run build` on every push to `main` (or
+the feature branch) and uploads `docs/` via `actions/deploy-pages@v4`.
+Enable it once at **Settings -> Pages -> Source: GitHub Actions**.
 
 `vite.config.ts` uses `base: "./"` so the build is path-agnostic and works
 under any project sub-path on Pages.

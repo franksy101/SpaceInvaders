@@ -2,46 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0; url=./docs/" />
     <title>Space Invaders Modern</title>
     <style>
-      :root {
-        color-scheme: dark;
-      }
       html, body {
         margin: 0;
         padding: 0;
-        height: 100%;
         background: #000;
         color: #0ff;
         font-family: "Courier New", monospace;
-        overflow: hidden;
-        user-select: none;
+        height: 100%;
       }
-      #app {
+      main {
         position: fixed;
         inset: 0;
         display: grid;
         place-items: center;
+        text-align: center;
       }
-      canvas {
-        display: block;
-        image-rendering: pixelated;
-      }
-      .hint {
-        position: fixed;
-        bottom: 8px;
-        left: 8px;
-        font-size: 11px;
-        color: rgba(0, 255, 255, 0.4);
-        pointer-events: none;
-        letter-spacing: 1px;
-      }
+      a { color: #ffe066; }
     </style>
   </head>
   <body>
-    <div id="app"></div>
-    <div class="hint">ARROWS / A,D = MOVE &nbsp;&nbsp; SPACE = FIRE &nbsp;&nbsp; P = PAUSE &nbsp;&nbsp; ENTER = START</div>
-    <script type="module" src="/src/main.ts"></script>
+    <main>
+      <div>
+        <p>Loading Space Invaders Modern...</p>
+        <p>If you are not redirected, <a href="./docs/">click here</a>.</p>
+      </div>
+    </main>
+    <script>
+      // Fallback JS redirect in case meta refresh is blocked.
+      window.location.replace("./docs/");
+    </script>
   </body>
 </html>
