@@ -84,6 +84,10 @@ export class Game {
     this.applyResponsiveScale();
     window.addEventListener("resize", () => this.applyResponsiveScale());
     window.addEventListener("orientationchange", () => this.applyResponsiveScale());
+    document.addEventListener("fullscreenchange", () => {
+      // Delay one frame so viewport metrics update.
+      requestAnimationFrame(() => this.applyResponsiveScale());
+    });
 
     installTouchControls(this.input, document.body);
 
@@ -164,7 +168,9 @@ export class Game {
     const c = this.app.canvas;
     const vw = Math.max(1, window.innerWidth);
     const vh = Math.max(1, window.innerHeight);
-    const scale = Math.max(0.1, Math.min(vw / CONFIG.width, vh / CONFIG.height) * 0.98);
+    const isTouch = matchMedia("(pointer: coarse)").matches;
+    const margin = isTouch ? 1.0 : 0.98;
+    const scale = Math.max(0.1, Math.min(vw / CONFIG.width, vh / CONFIG.height) * margin);
     c.style.width = `${CONFIG.width * scale}px`;
     c.style.height = `${CONFIG.height * scale}px`;
   }
