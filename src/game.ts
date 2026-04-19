@@ -359,9 +359,7 @@ export class Game {
       }
     }
 
-    const left = this.input.anyDown(["ArrowLeft", "KeyA"]);
-    const right = this.input.anyDown(["ArrowRight", "KeyD"]);
-    this.player.update(dt, left, right);
+    this.player.update(dt, this.input.steerAxis());
 
     if (this.input.anyDown(["Space", "KeyK"]) && this.player.canShoot()) {
       const spread = CONFIG.player.salvoSpread;

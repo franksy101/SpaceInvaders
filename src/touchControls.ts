@@ -1,8 +1,10 @@
 import { Input } from "./input";
 
-// Build a touch overlay with three big hit zones: Left, Right, Fire.
-// The overlay auto-hides on non-touch devices. Buttons synthesize key events
-// through Input.setVirtualKey so game logic stays keyboard-centric.
+// Build a touch overlay with a fullscreen swipe zone for steering, and small
+// Fire/Menu/Fullscreen buttons. Left/right is controlled by dragging the thumb
+// anywhere on the swipe zone: press anchors a reference point, moving the
+// finger sets a normalized axis (-1..1) that feeds Player via input.setTouchAxis.
+// Buttons still synthesize key events so game logic stays keyboard-centric.
 export function installTouchControls(input: Input, container: HTMLElement): void {
   const isTouch =
     "ontouchstart" in window ||
@@ -23,22 +25,37 @@ export function installTouchControls(input: Input, container: HTMLElement): void
         -webkit-user-select: none;
         -webkit-tap-highlight-color: transparent;
       }
+      /* Swipe zone covers the left/bottom area beneath the HUD. The Fire
+         button sits on top with higher z-index so it always wins taps. */
+      .touch-controls .swipe {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 64px;
+        bottom: 0;
+        pointer-events: auto;
+        background: transparent;
+      }
+      .touch-controls .swipe-hint {
+        position: absolute;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        color: rgba(0, 255, 209, 0.45);
+        font: 600 12px "Courier New", monospace;
+        letter-spacing: 2px;
+        pointer-events: none;
+        text-transform: uppercase;
+      }
       .touch-controls button {
         position: absolute;
         pointer-events: auto;
-        bottom: env(safe-area-inset-bottom, 16px);
-        width: 22vw;
-        height: 22vw;
-        max-width: 120px;
-        max-height: 120px;
-        min-width: 72px;
-        min-height: 72px;
         border-radius: 50%;
         border: 2px solid rgba(0, 255, 209, 0.7);
         background: rgba(0, 0, 0, 0.35);
         color: #7effe0;
-        font: 700 26px "Courier New", monospace;
-        letter-spacing: 2px;
+        font: 700 14px "Courier New", monospace;
+        letter-spacing: 1px;
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         transition: transform 0.08s, background 0.08s;
@@ -49,30 +66,33 @@ export function installTouchControls(input: Input, container: HTMLElement): void
         background: rgba(0, 255, 209, 0.25);
         color: #fff;
       }
-      .touch-controls .left  { left: 4vw; }
-      .touch-controls .right { left: calc(4vw + 26vw); }
-      .touch-controls .fire  {
+      .touch-controls .fire {
         right: 4vw;
+        bottom: env(safe-area-inset-bottom, 16px);
+        width: 16vw;
+        height: 16vw;
+        min-width: 64px;
+        min-height: 64px;
+        max-width: 96px;
+        max-height: 96px;
         border-color: rgba(255, 96, 96, 0.85);
         color: #ff9ea6;
-        font-size: 20px;
+        font-size: 16px;
+        z-index: 2;
       }
       .touch-controls .fire.pressed { background: rgba(255, 96, 96, 0.35); color: #fff; }
 
       .touch-controls .menu,
       .touch-controls .fullscreen {
-        position: absolute;
-        top: env(safe-area-inset-top, 12px);
-        width: 56px;
-        height: 44px;
-        min-width: 0;
-        min-height: 0;
+        top: env(safe-area-inset-top, 10px);
+        width: 44px;
+        height: 36px;
         border-radius: 10px;
-        font-size: 18px;
-        bottom: auto;
+        font-size: 14px;
+        z-index: 2;
       }
-      .touch-controls .menu       { right: 12px; }
-      .touch-controls .fullscreen { right: 78px; font-size: 22px; }
+      .touch-controls .menu       { right: 10px; }
+      .touch-controls .fullscreen { right: 62px; font-size: 18px; }
 
       /* Fullscreen button is also useful on desktop, keep it visible there. */
       .fullscreen-desktop {
@@ -96,8 +116,9 @@ export function installTouchControls(input: Input, container: HTMLElement): void
         .touch-controls { display: none !important; }
       }
     </style>
-    <button class="left"       data-code="ArrowLeft"  aria-label="Move left">&#x25C0;</button>
-    <button class="right"      data-code="ArrowRight" aria-label="Move right">&#x25B6;</button>
+    <div class="swipe" aria-label="Steering swipe area">
+      <div class="swipe-hint">DRAG TO STEER</div>
+    </div>
     <button class="fire"       data-code="Space"      aria-label="Fire">FIRE</button>
     <button class="fullscreen" data-action="fullscreen" aria-label="Fullscreen">&#x26F6;</button>
     <button class="menu"       data-code="Enter"      aria-label="Start / Menu">&#x23CE;</button>
@@ -112,6 +133,50 @@ export function installTouchControls(input: Input, container: HTMLElement): void
   fsDesk.addEventListener("click", () => toggleFullscreen());
   container.appendChild(fsDesk);
 
+  // --- Swipe-to-steer handling ---
+  const swipe = root.querySelector<HTMLDivElement>(".swipe");
+  if (swipe) {
+    let activePointer: number | null = null;
+    let anchorX = 0;
+    let lastX = 0;
+    // Pixels of thumb travel that equals full deflection. Tuned small so a
+    // small drag gives firm steering; the axis clamps at +-1.
+    const FULL_DEFLECTION_PX = 60;
+
+    const setAxisFromDelta = (dx: number): void => {
+      const v = Math.max(-1, Math.min(1, dx / FULL_DEFLECTION_PX));
+      input.setTouchAxis(v);
+    };
+
+    const onDown = (e: PointerEvent): void => {
+      if (activePointer !== null) return;
+      activePointer = e.pointerId;
+      anchorX = e.clientX;
+      lastX = e.clientX;
+      swipe.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    };
+    const onMove = (e: PointerEvent): void => {
+      if (e.pointerId !== activePointer) return;
+      lastX = e.clientX;
+      setAxisFromDelta(lastX - anchorX);
+      e.preventDefault();
+    };
+    const onUp = (e: PointerEvent): void => {
+      if (e.pointerId !== activePointer) return;
+      activePointer = null;
+      input.setTouchAxis(0);
+      try { swipe.releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
+      e.preventDefault();
+    };
+    swipe.addEventListener("pointerdown", onDown);
+    swipe.addEventListener("pointermove", onMove);
+    swipe.addEventListener("pointerup", onUp);
+    swipe.addEventListener("pointercancel", onUp);
+    swipe.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+
+  // --- Buttons ---
   const buttons = root.querySelectorAll<HTMLButtonElement>("button");
   buttons.forEach((btn) => {
     const code = btn.dataset.code;

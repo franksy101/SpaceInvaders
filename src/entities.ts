@@ -50,7 +50,7 @@ export class Player {
     this.view.addChild(g);
   }
 
-  update(dt: number, leftDown: boolean, rightDown: boolean): void {
+  update(dt: number, axis: number): void {
     this.cooldown = Math.max(0, this.cooldown - dt);
     if (this.respawnTimer > 0) {
       this.respawnTimer -= dt;
@@ -62,8 +62,7 @@ export class Player {
     }
 
     if (this.alive) {
-      const dir = (rightDown ? 1 : 0) - (leftDown ? 1 : 0);
-      this.x += dir * CONFIG.player.speed * dt;
+      this.x += axis * CONFIG.player.speed * dt;
       const margin = 24;
       if (this.x < margin) this.x = margin;
       if (this.x > CONFIG.width - margin) this.x = CONFIG.width - margin;

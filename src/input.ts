@@ -3,6 +3,7 @@ export class Input {
   private down = new Set<string>();
   private pressedThisFrame = new Set<string>();
   private releasedThisFrame = new Set<string>();
+  private touchAxis = 0; // -1..1, set by swipe steering
 
   constructor() {
     window.addEventListener("keydown", (e) => {
@@ -59,5 +60,18 @@ export class Input {
       if (this.down.has(code)) this.releasedThisFrame.add(code);
       this.down.delete(code);
     }
+  }
+
+  setTouchAxis(v: number): void {
+    this.touchAxis = Math.max(-1, Math.min(1, v));
+  }
+
+  // Combined steering axis from keyboard + touch drag. Touch overrides keys
+  // while a finger is down so the stick-style input feels responsive.
+  steerAxis(): number {
+    if (this.touchAxis !== 0) return this.touchAxis;
+    const left = this.down.has("ArrowLeft") || this.down.has("KeyA");
+    const right = this.down.has("ArrowRight") || this.down.has("KeyD");
+    return (right ? 1 : 0) - (left ? 1 : 0);
   }
 }
