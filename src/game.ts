@@ -1,4 +1,4 @@
-import { Application, Container, Graphics } from "pixi.js";
+import { Application, Container, Rectangle } from "pixi.js";
 import { BloomFilter } from "pixi-filters";
 import gsap from "gsap";
 import { CONFIG } from "./config";
@@ -26,6 +26,7 @@ export class Game {
   private input = new Input();
   private state: State = "TITLE";
 
+  private root: Container; // wraps world + ui, owns the CRT filter
   private world: Container; // all in-game graphics (shakable)
   private uiLayer: Container; // overlays, HUD - unshaken
   private starfield!: Starfield;
@@ -43,8 +44,8 @@ export class Game {
   private hsBoard!: HighscoreBoardScreen;
   private pause!: PauseOverlay;
 
-  private crt!: CRTFilter;
-  private bloom!: BloomFilter;
+  private crt: CRTFilter | null = null;
+  private bloom: BloomFilter | null = null;
   private highscores = new HighscoreBoard();
 
   // Gameplay state
@@ -61,6 +62,7 @@ export class Game {
 
   constructor(private container: HTMLElement) {
     this.app = new Application();
+    this.root = new Container();
     this.world = new Container();
     this.uiLayer = new Container();
   }
@@ -81,7 +83,8 @@ export class Game {
     this.applyResponsiveScale();
     window.addEventListener("resize", () => this.applyResponsiveScale());
 
-    this.app.stage.addChild(this.world, this.uiLayer);
+    this.root.addChild(this.world, this.uiLayer);
+    this.app.stage.addChild(this.root);
 
     // --- Background + world entities ---
     this.starfield = new Starfield(CONFIG.width, CONFIG.height);
@@ -116,10 +119,24 @@ export class Game {
     this.uiLayer.addChild(this.pause.view);
 
     // --- Filters (CRT on root, bloom on world) ---
-    this.crt = new CRTFilter({ scanline: 0.6, aberration: 2.0, curvature: 7.0, vignette: 0.9, noise: 0.03 });
-    this.bloom = new BloomFilter({ strength: 6, quality: 4 });
-    this.app.stage.filters = [this.crt];
-    this.world.filters = [this.bloom];
+    // Wrapped in try/catch so any shader/GPU issue does not break the game.
+    const fullArea = new Rectangle(0, 0, CONFIG.width, CONFIG.height);
+    try {
+      this.bloom = new BloomFilter({ strength: 6, quality: 4 });
+      this.world.filterArea = fullArea;
+      this.world.filters = [this.bloom];
+    } catch (err) {
+      console.warn("Bloom filter failed to initialize, continuing without it.", err);
+      this.bloom = null;
+    }
+    try {
+      this.crt = new CRTFilter({ scanline: 0.6, aberration: 2.0, curvature: 7.0, vignette: 0.9, noise: 0.03 });
+      this.root.filterArea = fullArea;
+      this.root.filters = [this.crt];
+    } catch (err) {
+      console.warn("CRT filter failed to initialize, continuing without it.", err);
+      this.crt = null;
+    }
 
     // Seed title with current highscores
     this.title.setHighscores(this.highscores.entries());
@@ -141,9 +158,9 @@ export class Game {
 
   private applyResponsiveScale(): void {
     const c = this.app.canvas;
-    const scaleX = window.innerWidth / CONFIG.width;
-    const scaleY = window.innerHeight / CONFIG.height;
-    const scale = Math.min(scaleX, scaleY) * 0.98;
+    const vw = Math.max(1, window.innerWidth);
+    const vh = Math.max(1, window.innerHeight);
+    const scale = Math.max(0.1, Math.min(vw / CONFIG.width, vh / CONFIG.height) * 0.98);
     c.style.width = `${CONFIG.width * scale}px`;
     c.style.height = `${CONFIG.height * scale}px`;
   }
@@ -228,7 +245,7 @@ export class Game {
 
   private tick(): void {
     const dt = Math.min(1 / 30, this.app.ticker.deltaMS / 1000);
-    this.crt.update(dt);
+    this.crt?.update(dt);
     this.starfield.update(dt);
     this.particles.update(dt);
 
