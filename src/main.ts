@@ -14,6 +14,9 @@ function showError(msg: string): void {
 }
 
 window.addEventListener("error", (e) => {
+  // Browsers report cross-origin script errors as opaque "Script error." with
+  // empty filename and lineno 0. No actionable info — suppress.
+  if (e.message === "Script error." && !e.filename && !e.lineno) return;
   showError(`Runtime error: ${e.message}\n${e.filename}:${e.lineno}:${e.colno}`);
 });
 window.addEventListener("unhandledrejection", (e) => {
